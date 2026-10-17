@@ -85,11 +85,21 @@ app.post('/api/init', async (req, res) => {
     }
 
     const systemInstruction = buildSystemInstruction(setup);
-    const openingPrompt = 'Descreva a cena de abertura imersiva deste mundo, apresentando a situação inicial imediata onde o protagonista se encontra e o primeiro dilema ou decisão que ele precisa tomar.';
+    const openingPrompt = `Descreva a cena de abertura imersiva deste mundo, apresentando a situação inicial imediata onde o protagonista se encontra e o primeiro dilema ou decisão que ele precisa tomar.
 
-    const opening = await generateStory(openingPrompt, systemInstruction);
+IMPORTANTE: Na última linha da sua resposta, adicione estritamente o formato abaixo com um título curto, marcante e memorável (máximo 3 a 6 palavras) que resuma esta aventura:
+[TITULO: Seu Título Aqui]`;
 
-    return res.json({ opening });
+    let opening = await generateStory(openingPrompt, systemInstruction);
+    let title = setup.theme.length > 30 ? setup.theme.slice(0, 30).trim() + '...' : setup.theme;
+
+    const titleMatch = opening.match(/\[TITULO:\s*(.+?)\]/i);
+    if (titleMatch) {
+      title = titleMatch[1].trim();
+      opening = opening.replace(/\[TITULO:\s*.+?\]/i, '').trim();
+    }
+
+    return res.json({ opening, title });
   } catch (error) {
     console.error('Erro em /api/init:', error);
     return res.status(500).json({

@@ -1,86 +1,123 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Verge</title>
   <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
+
 <body>
-  <div class="app-container">
-    <header class="app-header">
-      <h1>Verge</h1>
-      <span id="api-status" class="status-pill">Verificando IA...</span>
-    </header>
+  <div class="app-layout">
+    <!-- Overlay móvel -->
+    <div id="sidebar-overlay" class="sidebar-overlay hidden"></div>
 
-    <section id="setup-panel" class="card">
-      <h2>Defina o seu Universo</h2>
-      <p class="subtitle">Escolha livremente qualquer cenário, temática e o papel do seu personagem.</p>
-
-      <form id="setup-form">
-        <div class="form-group">
-          <label for="theme-input">Temática & Cenário:</label>
-          <textarea 
-            id="theme-input" 
-            rows="2" 
-            placeholder="Ex: Cyberpunk distópico em Neo-Tóquio subterrânea; Faroeste cósmico; Horror gótico vitoriano..." 
-            required
-          ></textarea>
+    <!-- Barra lateral estilo IA (ChatGPT/Claude) -->
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand">
+          <span class="brand-icon">🌌</span>
+          <h2>Verge</h2>
         </div>
-
-        <div class="form-group">
-          <label for="char-input">Seu Personagem / Papel:</label>
-          <input 
-            type="text" 
-            id="char-input" 
-            placeholder="Ex: Ex-investigador cibernético com implantes defeituosos" 
-            required
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="rules-input">Estilo & Regras:</label>
-          <input 
-            type="text" 
-            id="rules-input" 
-            placeholder="Ex: Narrativo e investigativo, foco em decisões morais difíceis" 
-            value="Narrativo dinâmico, consequências realistas às ações"
-          />
-        </div>
-
-        <button type="submit" id="btn-start" class="btn primary">
-          Gerar Mundo & Iniciar Aventura
-        </button>
-      </form>
-    </section>
-
-    <section id="game-panel" class="card hidden">
-      <div class="game-meta">
-        <div>
-          <strong id="active-theme-label">Cenário:</strong>
-          <span id="active-char-label" class="dim"></span>
-        </div>
-        <button type="button" id="btn-reset" class="btn small">Novo Mundo</button>
+        <button type="button" id="btn-close-sidebar" class="btn-icon mobile-only" aria-label="Fechar menu">✕</button>
       </div>
 
-      <div id="chat-box" class="chat-box"></div>
+      <button type="button" id="btn-new-adventure" class="btn primary btn-new">
+        <span>+</span> Nova Aventura
+      </button>
 
-      <div id="loading-indicator" class="loading hidden">
-        <span>O Mestre está tecendo a narrativa...</span>
+      <div class="sidebar-section">
+        <span class="sidebar-section-title">Suas Crônicas</span>
+        <div id="adventures-list" class="adventures-list">
+          <!-- Lista de aventuras injetada via script.js -->
+        </div>
       </div>
 
-      <form id="action-form" class="action-form">
-        <input 
-          type="text" 
-          id="action-input" 
-          placeholder="O que você faz agora?" 
-          autocomplete="off"
-        />
-        <button type="submit" id="btn-send" class="btn primary">Enviar</button>
-      </form>
-    </section>
+      <div class="sidebar-footer">
+        <span id="api-status" class="status-pill">Verificando IA...</span>
+      </div>
+    </aside>
+
+    <!-- Área Principal -->
+    <main class="main-content">
+      <header class="main-header">
+        <button type="button" id="btn-toggle-sidebar" class="btn-icon mobile-only"
+          aria-label="Menu de aventuras">☰</button>
+        <div class="main-header-actions">
+          <!-- Ações contextuais de topo se necessário -->
+        </div>
+      </header>
+
+      <div class="content-container">
+        <!-- Painel de Criação de Novo Mundo -->
+        <section id="setup-panel" class="card">
+          <h2>Criar Nova Aventura</h2>
+          <p class="subtitle">Defina livremente o cenário, seu papel e o estilo de regras. O Mestre adaptará tudo em
+            tempo real.</p>
+
+          <form id="setup-form">
+            <div class="form-group">
+              <label for="theme-input">Cenário & Temática:</label>
+              <textarea id="theme-input" rows="2"
+                placeholder="Ex: Cyberpunk distópico em Neo-Tóquio subterrânea; Faroeste cósmico; Horror gótico vitoriano..."
+                required></textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="char-input">Seu Personagem / Papel:</label>
+              <input type="text" id="char-input" placeholder="Ex: Ex-investigador cibernético com implantes defeituosos"
+                required />
+            </div>
+
+            <div class="form-group">
+              <label for="rules-input">Estilo & Regras:</label>
+              <input type="text" id="rules-input"
+                placeholder="Ex: Narrativo e investigativo, foco em decisões morais difíceis"
+                value="Narrativo dinâmico, consequências realistas às ações" />
+            </div>
+
+            <button type="submit" id="btn-start" class="btn primary">
+              Gerar Mundo & Iniciar Aventura
+            </button>
+          </form>
+        </section>
+
+        <!-- Painel do Jogo / Chat Ativo -->
+        <section id="game-panel" class="card hidden">
+          <div class="game-meta">
+            <div class="adventure-heading">
+              <h2 id="active-title-label">Carregando aventura...</h2>
+              <div class="adventure-subtags">
+                <span id="active-char-label" class="meta-tag"></span>
+                <span id="active-theme-label" class="dim"></span>
+              </div>
+            </div>
+            <div class="game-controls">
+              <button type="button" id="btn-export" class="btn small" title="Baixar crônica completa em Markdown">📜
+                Exportar (.md)</button>
+              <button type="button" id="btn-delete-adventure" class="btn small btn-danger"
+                title="Excluir esta aventura">🗑️ Excluir</button>
+            </div>
+          </div>
+
+          <div id="chat-box" class="chat-box"></div>
+
+          <div id="loading-indicator" class="loading hidden">
+            <span>O Mestre está tecendo a narrativa...</span>
+          </div>
+
+          <form id="action-form" class="action-form">
+            <input type="text" id="action-input" placeholder="O que você faz agora?" autocomplete="off" />
+            <button type="submit" id="btn-send" class="btn primary">Enviar</button>
+          </form>
+        </section>
+      </div>
+    </main>
   </div>
 
   <script src="script.js"></script>
 </body>
+
 </html>

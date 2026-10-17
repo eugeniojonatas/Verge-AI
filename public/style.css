@@ -1,13 +1,14 @@
 :root {
   --bg: #0f141c;
-  --card-bg: #161f2e;
-  --border: #273549;
+  --sidebar-bg: #090d14;
+  --card-bg: #141c29;
+  --border: #232f42;
   --text: #e2e8f0;
   --text-dim: #94a3b8;
   --accent: #38bdf8;
   --accent-hover: #0ea5e9;
-  --dm-bg: #1c2738;
-  --player-bg: #1e293b;
+  --dm-bg: #192436;
+  --player-bg: #1a2333;
 }
 
 * {
@@ -20,40 +21,232 @@ body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background-color: var(--bg);
   color: var(--text);
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  padding: 1.5rem;
+  height: 100vh;
+  overflow: hidden;
 }
 
-.app-container {
-  width: 100%;
-  max-width: 800px;
+.app-layout {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* =========================================================
+   BARRA LATERAL (SIDEBAR DE AVENTURAS ESTILO CHAT IA)
+   ========================================================= */
+.sidebar {
+  width: 290px;
+  background-color: var(--sidebar-bg);
+  border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  padding: 1rem;
+  gap: 1rem;
+  flex-shrink: 0;
+  z-index: 50;
+  transition: transform 0.25s ease;
 }
 
-.app-header {
+.sidebar-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 0.75rem;
+  justify-content: space-between;
 }
 
-.app-header h1 {
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.brand-icon {
   font-size: 1.25rem;
-  font-weight: 600;
+}
+
+.brand h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
   color: var(--accent);
   letter-spacing: 0.5px;
 }
 
+.btn-new {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+}
+
+.btn-new span {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.sidebar-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.sidebar-section-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+  margin-bottom: 0.6rem;
+  padding-left: 0.25rem;
+}
+
+.adventures-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-right: 0.25rem;
+}
+
+.adventure-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0.75rem;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.adventure-item:hover {
+  background: #141c2b;
+  border-color: var(--border);
+}
+
+.adventure-item.active {
+  background: #182538;
+  border-color: var(--accent);
+}
+
+.adventure-item-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.adventure-item-title {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.adventure-item.active .adventure-item-title {
+  color: #fff;
+  font-weight: 600;
+}
+
+.adventure-item-meta {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.adventure-item-delete {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 0.95rem;
+  padding: 0.25rem 0.4rem;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, background 0.15s;
+}
+
+.adventure-item:hover .adventure-item-delete {
+  opacity: 0.75;
+}
+
+.adventure-item-delete:hover {
+  opacity: 1;
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.15);
+}
+
+.adventures-empty {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  text-align: center;
+  padding: 2rem 0.5rem;
+  font-style: italic;
+}
+
+.sidebar-footer {
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* =========================================================
+   ÁREA PRINCIPAL
+   ========================================================= */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow-y: auto;
+  background: var(--bg);
+}
+
+.main-header {
+  height: 52px;
+  padding: 0 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  background: #0a0e16;
+  flex-shrink: 0;
+}
+
+.main-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.content-container {
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
 .status-pill {
   font-size: 0.75rem;
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-  background: #1e293b;
+  padding: 0.25rem 0.6rem;
+  border-radius: 9999px;
+  background: #141c2b;
   border: 1px solid var(--border);
   color: var(--text-dim);
 }
@@ -61,6 +254,7 @@ body {
 .status-pill.online {
   color: #4ade80;
   border-color: #4ade8055;
+  background: #0e2417;
 }
 
 .card {
@@ -71,8 +265,8 @@ body {
 }
 
 .card h2 {
-  font-size: 1.1rem;
-  margin-bottom: 0.25rem;
+  font-size: 1.15rem;
+  margin-bottom: 0.35rem;
 }
 
 .subtitle {
@@ -85,7 +279,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.1rem;
 }
 
 label {
@@ -96,11 +290,11 @@ label {
 
 input, textarea {
   width: 100%;
-  background: #0b0f17;
+  background: #090e17;
   border: 1px solid var(--border);
   border-radius: 6px;
   color: var(--text);
-  padding: 0.65rem 0.85rem;
+  padding: 0.7rem 0.85rem;
   font-size: 0.95rem;
   font-family: inherit;
   outline: none;
@@ -111,7 +305,7 @@ input:focus, textarea:focus {
 }
 
 .btn {
-  background: #1e293b;
+  background: #1a2536;
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -123,12 +317,12 @@ input:focus, textarea:focus {
 }
 
 .btn:hover {
-  background: #334155;
+  background: #23334a;
 }
 
 .btn.primary {
   background: var(--accent);
-  color: #0b1120;
+  color: #090e17;
   border-color: var(--accent);
   font-weight: 600;
 }
@@ -138,8 +332,18 @@ input:focus, textarea:focus {
 }
 
 .btn.small {
-  padding: 0.35rem 0.75rem;
+  padding: 0.4rem 0.8rem;
   font-size: 0.8rem;
+}
+
+.btn-danger {
+  color: #f87171 !important;
+  border-color: #f8717144 !important;
+}
+
+.btn-danger:hover {
+  background: #ef444422 !important;
+  border-color: #f87171 !important;
 }
 
 .btn:disabled {
@@ -147,28 +351,64 @@ input:focus, textarea:focus {
   cursor: not-allowed;
 }
 
+.btn-icon {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
 .hidden {
   display: none !important;
 }
 
+/* =========================================================
+   PAINEL DE JOGO & CHAT
+   ========================================================= */
 .game-meta {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  font-size: 0.85rem;
-  padding-bottom: 0.75rem;
+  align-items: flex-start;
+  padding-bottom: 0.85rem;
   margin-bottom: 1rem;
   border-bottom: 1px solid var(--border);
+  gap: 1rem;
+}
+
+.adventure-heading h2 {
+  font-size: 1.15rem;
+  color: #fff;
+  margin-bottom: 0.25rem;
+}
+
+.adventure-subtags {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+}
+
+.meta-tag {
+  color: var(--accent);
+  font-weight: 500;
 }
 
 .dim {
   color: var(--text-dim);
-  margin-left: 0.5rem;
+}
+
+.game-controls {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 .chat-box {
-  min-height: 380px;
-  max-height: 520px;
+  min-height: 400px;
+  max-height: 540px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -182,6 +422,7 @@ input:focus, textarea:focus {
   border-radius: 6px;
   line-height: 1.6;
   font-size: 0.95rem;
+  word-break: break-word;
 }
 
 .message.dm {
@@ -190,7 +431,44 @@ input:focus, textarea:focus {
 }
 
 .message.dm p + p {
-  margin-top: 0.5rem;
+  margin-top: 0.65rem;
+}
+
+.message.dm strong {
+  color: #f8fafc;
+  font-weight: 600;
+}
+
+.message.dm em {
+  color: #93c5fd;
+  font-style: italic;
+}
+
+.message.dm blockquote {
+  border-left: 2px solid var(--accent);
+  padding: 0.3rem 0 0.3rem 0.75rem;
+  margin: 0.6rem 0;
+  color: #cbd5e1;
+  font-style: italic;
+  background: rgba(56, 189, 248, 0.05);
+  border-radius: 0 4px 4px 0;
+}
+
+.message.dm ul, .message.dm ol {
+  margin: 0.5rem 0 0.5rem 1.4rem;
+}
+
+.message.dm li {
+  margin-bottom: 0.25rem;
+}
+
+.message.dm code {
+  background: #090e17;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.15rem 0.35rem;
+  font-size: 0.85em;
+  color: var(--accent);
 }
 
 .message.player {
@@ -221,4 +499,42 @@ input:focus, textarea:focus {
 
 .action-form input {
   flex: 1;
+}
+
+/* =========================================================
+   RESPONSIVIDADE (MOBILE / TABLETS)
+   ========================================================= */
+.mobile-only {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-only {
+    display: inline-block;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    transform: translateX(-100%);
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.5);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(2px);
+    z-index: 40;
+  }
+
+  .content-container {
+    padding: 1rem;
+  }
 }
