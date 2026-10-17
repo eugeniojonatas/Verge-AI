@@ -492,6 +492,66 @@ input:focus, textarea:focus {
   margin-bottom: 0.75rem;
 }
 
+/* =========================================================
+   SUGESTÕES DE AÇÃO RÁPIDAS (ACTION CHIPS)
+   ========================================================= */
+.action-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-bottom: 0.85rem;
+  padding: 0.75rem;
+  background: rgba(15, 23, 38, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.suggestions-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--accent);
+}
+
+.suggestions-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.suggestion-chip {
+  background: #152233;
+  color: #e2e8f0;
+  border: 1px solid #283a52;
+  border-radius: 9999px;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.84rem;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  text-align: left;
+  line-height: 1.4;
+  user-select: none;
+}
+
+.suggestion-chip:hover {
+  background: #1c2e47;
+  border-color: var(--accent);
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(56, 189, 248, 0.15);
+}
+
+.suggestion-chip:active {
+  transform: translateY(0);
+}
+
+.suggestion-chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .action-form {
   display: flex;
   gap: 0.5rem;

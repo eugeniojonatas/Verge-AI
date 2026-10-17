@@ -43,7 +43,25 @@ DIRETRIZES FUNDAMENTAIS:
 2. Seja sensorial e detalhista, mantendo as respostas objetivas (2 a 4 parágrafos concisos).
 3. Respeite as ações do jogador, narrando consequências lógicas e novos desafios.
 4. NUNCA narre pelo jogador nem tome decisões por ele.
-5. Conclua cada turno com o cenário em aberto ou opções instigantes, instigando a ação do jogador.`;
+5. Conclua cada turno com o cenário em aberto e instigue a ação do jogador.
+6. OBRIGATÓRIO: Ao final de toda resposta, sugira exatamente 3 opções de ações possíveis, dinâmicas e contrastantes para o protagonista tomar a seguir, separadas por barra vertical '|', estritamente no formato:
+[OPCOES: Primeira ação | Segunda ação | Terceira ação]`;
+}
+
+function parseStoryResponse(rawText) {
+  let text = rawText || '';
+  let options = [];
+
+  const optionsMatch = text.match(/\[(?:OPÇÕES|OPCOES|SUGESTÕES|SUGESTOES|ESCOLHAS):\s*(.+?)\]/i);
+  if (optionsMatch) {
+    options = optionsMatch[1]
+      .split('|')
+      .map(opt => opt.trim())
+      .filter(opt => opt.length > 0);
+    text = text.replace(/\[(?:OPÇÕES|OPCOES|SUGESTÕES|SUGESTOES|ESCOLHAS):\s*.+?\]/i, '').trim();
+  }
+
+  return { text, options };
 }
 
 async function generateStory(contents, systemInstruction) {
@@ -87,19 +105,24 @@ app.post('/api/init', async (req, res) => {
     const systemInstruction = buildSystemInstruction(setup);
     const openingPrompt = `Descreva a cena de abertura imersiva deste mundo, apresentando a situação inicial imediata onde o protagonista se encontra e o primeiro dilema ou decisão que ele precisa tomar.
 
-IMPORTANTE: Na última linha da sua resposta, adicione estritamente o formato abaixo com um título curto, marcante e memorável (máximo 3 a 6 palavras) que resuma esta aventura:
-[TITULO: Seu Título Aqui]`;
+IMPORTANTE:
+1. Na penúltima linha, forneça um título marcante para esta aventura:
+[TITULO: Seu Título Aqui]
+2. Na última linha, forneça 3 opções de ações iniciais instigantes:
+[OPCOES: Opção 1 | Opção 2 | Opção 3]`;
 
-    let opening = await generateStory(openingPrompt, systemInstruction);
+    let rawOpening = await generateStory(openingPrompt, systemInstruction);
     let title = setup.theme.length > 30 ? setup.theme.slice(0, 30).trim() + '...' : setup.theme;
 
-    const titleMatch = opening.match(/\[TITULO:\s*(.+?)\]/i);
+    const titleMatch = rawOpening.match(/\[TITULO:\s*(.+?)\]/i);
     if (titleMatch) {
       title = titleMatch[1].trim();
-      opening = opening.replace(/\[TITULO:\s*.+?\]/i, '').trim();
+      rawOpening = rawOpening.replace(/\[TITULO:\s*.+?\]/i, '').trim();
     }
 
-    return res.json({ opening, title });
+    const { text: opening, options } = parseStoryResponse(rawOpening);
+
+    return res.json({ opening, title, options });
   } catch (error) {
     console.error('Erro em /api/init:', error);
     return res.status(500).json({
@@ -131,9 +154,10 @@ app.post('/api/chat', async (req, res) => {
       parts: [{ text: message }]
     });
 
-    const reply = await generateStory(contents, systemInstruction);
+    const rawReply = await generateStory(contents, systemInstruction);
+    const { text: reply, options } = parseStoryResponse(rawReply);
 
-    return res.json({ reply });
+    return res.json({ reply, options });
   } catch (error) {
     console.error('Erro em /api/chat:', error);
     return res.status(500).json({

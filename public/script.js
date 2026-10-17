@@ -17,6 +17,7 @@ const AdventureStorage = {
           title: parsed.setup?.theme ? parsed.setup.theme.slice(0, 28) : 'Aventura Anterior',
           setup: parsed.setup,
           history: parsed.history || [],
+          lastOptions: [],
           updatedAt: parsed.updatedAt || new Date().toISOString()
         }];
         localStorage.setItem(STORAGE_ADVENTURES_KEY, JSON.stringify(migrated));
@@ -56,7 +57,7 @@ const AdventureStorage = {
     return list.find(a => a.id === id) || null;
   },
 
-  create(title, setup, openingText) {
+  create(title, setup, openingText, options = []) {
     const list = this.getAll();
     const newAdventure = {
       id: 'adv_' + Date.now(),
@@ -65,6 +66,7 @@ const AdventureStorage = {
       history: [
         { role: 'model', text: openingText }
       ],
+      lastOptions: options || [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -74,11 +76,14 @@ const AdventureStorage = {
     return newAdventure;
   },
 
-  updateHistory(id, newHistory) {
+  updateHistory(id, newHistory, options = null) {
     const list = this.getAll();
     const index = list.findIndex(a => a.id === id);
     if (index !== -1) {
       list[index].history = newHistory;
+      if (options !== null) {
+        list[index].lastOptions = options;
+      }
       list[index].updatedAt = new Date().toISOString();
       this.saveAll(list);
     }
@@ -124,6 +129,8 @@ const dom = {
   btnDeleteAdventure: document.getElementById('btn-delete-adventure'),
   chatBox: document.getElementById('chat-box'),
   loading: document.getElementById('loading-indicator'),
+  actionSuggestions: document.getElementById('action-suggestions'),
+  suggestionsContainer: document.getElementById('suggestions-container'),
   actionForm: document.getElementById('action-form'),
   actionInput: document.getElementById('action-input'),
   btnSend: document.getElementById('btn-send')
@@ -187,6 +194,43 @@ function setLoading(loading) {
   dom.btnSend.disabled = loading;
   dom.actionInput.disabled = loading;
   if (dom.btnStart) dom.btnStart.disabled = loading;
+
+  // Desabilitar chips enquanto carrega
+  if (dom.suggestionsContainer) {
+    const chips = dom.suggestionsContainer.querySelectorAll('.suggestion-chip');
+    chips.forEach(chip => chip.disabled = loading);
+  }
+}
+
+function renderSuggestions(options) {
+  if (!dom.actionSuggestions || !dom.suggestionsContainer) return;
+
+  if (!options || !Array.isArray(options) || options.length === 0) {
+    dom.actionSuggestions.classList.add('hidden');
+    dom.suggestionsContainer.innerHTML = '';
+    return;
+  }
+
+  dom.suggestionsContainer.innerHTML = '';
+  options.forEach(opt => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'suggestion-chip';
+    chip.title = 'Clique para preencher a caixa de ação e editar';
+    chip.textContent = opt;
+
+    chip.addEventListener('click', () => {
+      if (state.isLoading) return;
+      dom.actionInput.value = opt;
+      dom.actionInput.focus();
+      const len = dom.actionInput.value.length;
+      dom.actionInput.setSelectionRange(len, len);
+    });
+
+    dom.suggestionsContainer.appendChild(chip);
+  });
+
+  dom.actionSuggestions.classList.remove('hidden');
 }
 
 function closeMobileSidebar() {
@@ -267,6 +311,7 @@ function showSetupPanel() {
 
   dom.setupPanel.classList.remove('hidden');
   dom.gamePanel.classList.add('hidden');
+  if (dom.actionSuggestions) dom.actionSuggestions.classList.add('hidden');
 
   dom.themeInput.value = '';
   dom.charInput.value = '';
@@ -297,8 +342,59 @@ function selectAdventure(id) {
     appendMessage(turn.role === 'user' ? 'player' : 'dm', turn.text);
   });
 
+  renderSuggestions(adv.lastOptions || []);
+
   dom.actionInput.focus();
   renderSidebar();
+}
+
+async function submitAction(actionText) {
+  const action = (actionText || '').trim();
+  if (!action || state.isLoading || !state.activeAdventure) return;
+
+  appendMessage('player', action);
+  dom.actionInput.value = '';
+
+  state.activeAdventure.history.push({ role: 'user', text: action });
+  AdventureStorage.updateHistory(state.activeAdventure.id, state.activeAdventure.history);
+
+  // Esconder sugestões anteriores enquanto carrega a nova rodada
+  if (dom.actionSuggestions) dom.actionSuggestions.classList.add('hidden');
+  setLoading(true);
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        setup: state.activeAdventure.setup,
+        message: action,
+        history: state.activeAdventure.history
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erro ao processar turno.');
+
+    appendMessage('dm', data.reply);
+    state.activeAdventure.history.push({ role: 'model', text: data.reply });
+    state.activeAdventure.lastOptions = data.options || [];
+
+    AdventureStorage.updateHistory(
+      state.activeAdventure.id,
+      state.activeAdventure.history,
+      data.options || []
+    );
+
+    renderSuggestions(data.options || []);
+    renderSidebar();
+
+  } catch (err) {
+    appendMessage('dm', `[Falha de conexão com o Mestre: ${err.message}]`);
+  } finally {
+    setLoading(false);
+    dom.actionInput.focus();
+  }
 }
 
 function exportCurrentChronicle() {
@@ -377,7 +473,12 @@ dom.setupForm.addEventListener('submit', async (e) => {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Erro ao inicializar o mundo.');
 
-    const newAdventure = AdventureStorage.create(data.title, setup, data.opening);
+    const newAdventure = AdventureStorage.create(
+      data.title,
+      setup,
+      data.opening,
+      data.options || []
+    );
     selectAdventure(newAdventure.id);
 
   } catch (err) {
@@ -387,45 +488,9 @@ dom.setupForm.addEventListener('submit', async (e) => {
   }
 });
 
-dom.actionForm.addEventListener('submit', async (e) => {
+dom.actionForm.addEventListener('submit', (e) => {
   e.preventDefault();
-
-  const action = dom.actionInput.value.trim();
-  if (!action || state.isLoading || !state.activeAdventure) return;
-
-  appendMessage('player', action);
-  dom.actionInput.value = '';
-
-  state.activeAdventure.history.push({ role: 'user', text: action });
-  AdventureStorage.updateHistory(state.activeAdventure.id, state.activeAdventure.history);
-
-  setLoading(true);
-
-  try {
-    const res = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        setup: state.activeAdventure.setup,
-        message: action,
-        history: state.activeAdventure.history
-      })
-    });
-
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Erro ao processar turno.');
-
-    appendMessage('dm', data.reply);
-    state.activeAdventure.history.push({ role: 'model', text: data.reply });
-    AdventureStorage.updateHistory(state.activeAdventure.id, state.activeAdventure.history);
-    renderSidebar();
-
-  } catch (err) {
-    appendMessage('dm', `[Falha de conexão com o Mestre: ${err.message}]`);
-  } finally {
-    setLoading(false);
-    dom.actionInput.focus();
-  }
+  submitAction(dom.actionInput.value);
 });
 
 if (dom.btnExport) {
