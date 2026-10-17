@@ -54,15 +54,31 @@
         <!-- Painel de Criação de Novo Mundo -->
         <section id="setup-panel" class="card">
           <h2>Criar Nova Aventura</h2>
-          <p class="subtitle">Defina livremente o cenário, seu papel e o estilo de regras. O Mestre adaptará tudo em
-            tempo real.</p>
+          <p class="subtitle">Escolha um dos universos prontos abaixo ou customize livremente seu cenário, herói e regras.</p>
+
+          <!-- 1. Galeria de Cenários Dinâmicos Gerados por IA -->
+          <div class="preset-section">
+            <div class="preset-section-header">
+              <label class="section-label">1. Escolha um Cenário ou digite o seu:</label>
+              <button type="button" id="btn-refresh-presets" class="btn small btn-refresh-presets" title="Criar 3 universos e personagens completamente inéditos com Inteligência Artificial">
+                <span>✨</span> Gerar Novos Mundos com IA
+              </button>
+            </div>
+            <div id="scenario-presets-grid" class="scenario-grid"></div>
+          </div>
 
           <form id="setup-form">
             <div class="form-group">
-              <label for="theme-input">Cenário & Temática:</label>
+              <label for="theme-input">Cenário & Temática Selecionada:</label>
               <textarea id="theme-input" rows="2"
                 placeholder="Ex: Cyberpunk distópico em Neo-Tóquio subterrânea; Faroeste cósmico; Horror gótico vitoriano..."
                 required></textarea>
+            </div>
+
+            <!-- 2. Personagens Contextuais -->
+            <div id="char-presets-wrapper" class="preset-section hidden">
+              <label class="section-label">2. Arquétipos Sugeridos para este Cenário (clique para escolher):</label>
+              <div id="char-presets-list" class="character-grid"></div>
             </div>
 
             <div class="form-group">
@@ -71,15 +87,39 @@
                 required />
             </div>
 
-            <div class="form-group">
-              <label for="rules-input">Estilo & Regras:</label>
-              <input type="text" id="rules-input"
-                placeholder="Ex: Narrativo e investigativo, foco em decisões morais difíceis"
-                value="Narrativo dinâmico, consequências realistas às ações" />
+            <!-- 3. Presets de Regras & Regra Especial de Dados -->
+            <div class="preset-section">
+              <label class="section-label">3. Estilo de Jogo & Regras:</label>
+              <div id="rule-presets-list" class="rules-chips"></div>
+
+              <!-- Regra Especial Destacada: Dados d20 -->
+              <div class="special-rule-card">
+                <div class="special-rule-info">
+                  <span class="special-rule-icon">🎲</span>
+                  <div class="special-rule-text">
+                    <div class="special-rule-heading">
+                      <strong>Modo Testes de Risco (Dados d20)</strong>
+                      <span class="badge-featured">Regra Especial de RPG</span>
+                    </div>
+                    <p class="special-rule-desc">Verge avalia suas ações e avisa quando for arriscado. Se confirmar, ele rola o d20 e narra o destino!</p>
+                  </div>
+                </div>
+                <label class="switch-toggle" title="Ativar ou desativar mecânica de dados d20">
+                  <input type="checkbox" id="toggle-dice-rule" checked />
+                  <span class="slider-round"></span>
+                </label>
+              </div>
             </div>
 
-            <button type="submit" id="btn-start" class="btn primary">
-              Gerar Mundo & Iniciar Aventura
+            <div class="form-group">
+              <label for="rules-input">Regras e Tom da Aventura:</label>
+              <input type="text" id="rules-input"
+                placeholder="Ex: Narrativo e investigativo, foco em decisões morais difíceis"
+                value="Narrativo dinâmico com testes de dados d20 em ações arriscadas" />
+            </div>
+
+            <button type="submit" id="btn-start" class="btn primary btn-start-adventure">
+              ✨ Gerar Mundo & Iniciar Aventura
             </button>
           </form>
         </section>
@@ -118,7 +158,7 @@
           <div id="chat-box" class="chat-box"></div>
 
           <div id="loading-indicator" class="loading hidden">
-            <span>O Mestre está tecendo a narrativa...</span>
+            <span>Verge está tecendo a narrativa...</span>
           </div>
 
           <!-- Sugestões de Ação Rápidas (Action Chips) -->

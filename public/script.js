@@ -1,6 +1,67 @@
 const STORAGE_ADVENTURES_KEY = 'verge_ai_adventures';
 const STORAGE_ACTIVE_ID_KEY = 'verge_ai_active_id';
 
+// Presets de Cenários, Personagens Contextuais e Regras
+const SCENARIO_PRESETS = [
+  {
+    id: 'medieval-fantasy',
+    icon: '⚔️',
+    title: 'Fantasia Medieval',
+    summary: 'The Witcher / D&D: Tavernas, reinos em conflito, monstros e magia.',
+    theme: 'Um reino medieval assolado por tensões entre barões rivais, monstros espreitando nas florestas e ruínas antigas repletas de segredos arcanos.',
+    characters: [
+      { name: 'Caçador de Monstros Errante', desc: 'Espadachim veterano com reflexos treinados, poções alquímicas e cicatrizes de bestas antigas.' },
+      { name: 'Mago Acadêmico Renegado', desc: 'Estudioso de magias arcanas banidas, expulso da academia real em busca de relíquias proibidas.' },
+      { name: 'Ladina dos Subterrâneos', desc: 'Especialista em invasão furtiva e venenos, com contatos na influente guilda de ladrões.' }
+    ],
+    defaultRule: 'Aventura épica balanceada, magia misteriosa, combate tático e consequências de honra.'
+  },
+  {
+    id: 'zombie-apocalypse',
+    icon: '🧟',
+    title: 'Apocalipse Zumbi',
+    summary: 'The Last of Us / Walking Dead: Cidades em ruínas, infectados e sobrevivência.',
+    theme: 'Uma metrópole em ruínas dominada pela vegetação e hordas de infectados letais anos após o colapso, onde comida, abrigo e munição valem mais que ouro.',
+    characters: [
+      { name: 'Sobrevivente Calejado', desc: 'Veterano pragmático com instinto de sobrevivência apurado, poucas balas e mestre em armadilhas.' },
+      { name: 'Médica de Posto Avançado', desc: 'Ex-cirurgiã que domina primeiros socorros e botânica para produzir remédios em meio ao caos.' },
+      { name: 'Batedor de Zona Proibida', desc: 'Jovem ágil que domina parkour em telhados e conhece rotas secretas infestadas por infectados.' }
+    ],
+    defaultRule: 'Sobrevivência crua, escassez severa de munição, furtividade obrigatória e tensão psicológica.'
+  },
+  {
+    id: 'cyberpunk',
+    icon: '🦾',
+    title: 'Cyberpunk & Submundo',
+    summary: 'Cyberpunk 2077: Megacorporações, neon, implantes ilegais e hackers.',
+    theme: 'Uma megalópole futurista chuvosa iluminada por neon, onde megacorporações bilionárias ditam as leis e mercenários com implantes cibernéticos disputam as ruas.',
+    characters: [
+      { name: 'Mercenário Cibernético', desc: 'Combatente com braço biônico reforçado e reflexos neurais acelerados aceitando trabalhos sujos.' },
+      { name: 'Netrunner Especialista', desc: 'Hacker de elite com interface neural direta capaz de desativar câmeras, torres e implantes inimigos.' },
+      { name: 'Médico Clandestino de Beco', desc: 'Cirurgião que instala próteses no mercado negro e deve favores perigosos a sindicatos do crime.' }
+    ],
+    defaultRule: 'Alta tecnologia, moralidade cinzenta, vigilância corporativa e ação frenética.'
+  }
+];
+
+const RULE_PRESETS = [
+  {
+    id: 'balanced',
+    title: '⚖️ Causa & Efeito Equilibrado',
+    text: 'Narrativo dinâmico, consequências realistas e causa e efeito estrito às ações do protagonista.'
+  },
+  {
+    id: 'hardcore',
+    title: '💀 Sobrevivência Brutal & Escassez',
+    text: 'Realismo implacável, recursos extremamente escassos, ferimentos pesados e risco constante de morte.'
+  },
+  {
+    id: 'cinematic',
+    title: '🎬 Ação Cinematográfica & Mistério',
+    text: 'Ritmo acelerado, revelações dramáticas, pistas instigantes e reviravoltas cinematográficas.'
+  }
+];
+
 // Gerenciador de armazenamento das múltiplas aventuras
 const AdventureStorage = {
   getAll() {
@@ -8,7 +69,7 @@ const AdventureStorage = {
       const raw = localStorage.getItem(STORAGE_ADVENTURES_KEY);
       if (raw) return JSON.parse(raw);
 
-      // Migração suave caso o jogador tenha um save do modelo antigo
+      // Migração suave de formatos antigos
       const legacy = localStorage.getItem('verge_ai_active_adventure');
       if (legacy) {
         const parsed = JSON.parse(legacy);
@@ -107,7 +168,9 @@ const AdventureStorage = {
 
 const state = {
   activeAdventure: null,
-  isLoading: false
+  isLoading: false,
+  selectedScenarioId: null,
+  scenarios: [...SCENARIO_PRESETS]
 };
 
 const dom = {
@@ -122,6 +185,13 @@ const dom = {
   setupPanel: document.getElementById('setup-panel'),
   gamePanel: document.getElementById('game-panel'),
   setupForm: document.getElementById('setup-form'),
+  btnRefreshPresets: document.getElementById('btn-refresh-presets'),
+  scenarioPresetsGrid: document.getElementById('scenario-presets-grid'),
+  charPresetsWrapper: document.getElementById('char-presets-wrapper'),
+  charPresetsList: document.getElementById('char-presets-list'),
+  rulePresetsList: document.getElementById('rule-presets-list'),
+  toggleDiceRule: document.getElementById('toggle-dice-rule'),
+
   themeInput: document.getElementById('theme-input'),
   charInput: document.getElementById('char-input'),
   rulesInput: document.getElementById('rules-input'),
@@ -142,7 +212,8 @@ const dom = {
   suggestionsContainer: document.getElementById('suggestions-container'),
   actionForm: document.getElementById('action-form'),
   actionInput: document.getElementById('action-input'),
-  btnSend: document.getElementById('btn-send')
+  btnSend: document.getElementById('btn-send'),
+  btnRollDice: document.getElementById('btn-roll-dice')
 };
 
 async function checkApiStatus() {
@@ -189,6 +260,10 @@ function appendMessage(role, text) {
       <div class="author">Você</div>
       <div>${escapeHTML(text)}</div>
     `;
+  } else if (role === 'system') {
+    msgDiv.innerHTML = `
+      <div class="dice-result-badge">${renderMarkdown(text)}</div>
+    `;
   } else {
     msgDiv.innerHTML = renderMarkdown(text);
   }
@@ -202,6 +277,7 @@ function setLoading(loading) {
   dom.loading.classList.toggle('hidden', !loading);
   dom.btnSend.disabled = loading;
   dom.actionInput.disabled = loading;
+  if (dom.btnRollDice) dom.btnRollDice.disabled = loading;
   if (dom.btnStart) dom.btnStart.disabled = loading;
 
   // Desabilitar chips enquanto carrega
@@ -270,6 +346,316 @@ function renderSuggestions(options) {
   });
 
   dom.actionSuggestions.classList.remove('hidden');
+}
+
+// =========================================================
+// PRESETS INTERATIVOS (CENÁRIOS, PERSONAGENS & REGRAS)
+// =========================================================
+function renderScenarioPresets() {
+  if (!dom.scenarioPresetsGrid) return;
+  dom.scenarioPresetsGrid.innerHTML = '';
+
+  const list = state.scenarios && state.scenarios.length > 0 ? state.scenarios : SCENARIO_PRESETS;
+
+  list.forEach(scenario => {
+    const card = document.createElement('div');
+    card.className = `scenario-card ${state.selectedScenarioId === scenario.id ? 'active' : ''}`;
+    card.innerHTML = `
+      <div class="scenario-card-header">
+        <span class="scenario-card-icon">${scenario.icon || '🌌'}</span>
+        <span class="scenario-card-title">${escapeHTML(scenario.title)}</span>
+      </div>
+      <p class="scenario-card-desc">${escapeHTML(scenario.summary)}</p>
+    `;
+
+    card.addEventListener('click', () => {
+      selectScenarioPreset(scenario);
+    });
+
+    dom.scenarioPresetsGrid.appendChild(card);
+  });
+}
+
+function selectScenarioPreset(scenario) {
+  state.selectedScenarioId = scenario.id;
+
+  const list = state.scenarios && state.scenarios.length > 0 ? state.scenarios : SCENARIO_PRESETS;
+
+  // Atualiza cards ativos
+  const cards = dom.scenarioPresetsGrid.querySelectorAll('.scenario-card');
+  cards.forEach((c, idx) => {
+    if (list[idx]) {
+      c.classList.toggle('active', list[idx].id === scenario.id);
+    }
+  });
+
+  // Preenche tema
+  dom.themeInput.value = scenario.theme;
+
+  // Abre e renderiza personagens contextuais deste cenário
+  renderCharacterPresets(scenario.characters);
+
+  // Seleciona a primeira opção de personagem por padrão para conveniência
+  if (scenario.characters && scenario.characters.length > 0) {
+    selectCharacterPreset(scenario.characters[0], 0);
+  }
+
+  // Atualiza regra
+  updateRulesInputValue(scenario.defaultRule);
+}
+
+async function fetchNewAiPresets() {
+  if (!dom.btnRefreshPresets) return;
+
+  dom.btnRefreshPresets.disabled = true;
+  const originalHtml = dom.btnRefreshPresets.innerHTML;
+  dom.btnRefreshPresets.innerHTML = '<span>⏳</span> Verge está criando...';
+
+  // Feedback visual no grid
+  dom.scenarioPresetsGrid.innerHTML = `
+    <div style="grid-column: 1 / -1; padding: 2.5rem 1rem; text-align: center; color: var(--accent); font-style: italic;">
+      ✨ Verge está tecendo 3 novos mundos consagrados da cultura pop...
+    </div>
+  `;
+
+  try {
+    const res = await fetch('/api/generate-presets');
+    const data = await res.json();
+
+    if (!res.ok || !data.presets || !Array.isArray(data.presets) || data.presets.length === 0) {
+      throw new Error(data.error || 'Falha ao gerar presets.');
+    }
+
+    state.scenarios = data.presets.slice(0, 3);
+    renderScenarioPresets();
+
+    if (state.scenarios.length > 0) {
+      selectScenarioPreset(state.scenarios[0]);
+    }
+  } catch (err) {
+    console.warn('Erro ao gerar com IA:', err);
+    alert('Não foi possível gerar novos mundos no momento. Restaurando cenários anteriores.');
+    renderScenarioPresets();
+  } finally {
+    dom.btnRefreshPresets.disabled = false;
+    dom.btnRefreshPresets.innerHTML = originalHtml;
+  }
+}
+
+function renderCharacterPresets(characters) {
+  if (!dom.charPresetsWrapper || !dom.charPresetsList) return;
+
+  if (!characters || characters.length === 0) {
+    dom.charPresetsWrapper.classList.add('hidden');
+    dom.charPresetsList.innerHTML = '';
+    return;
+  }
+
+  dom.charPresetsWrapper.classList.remove('hidden');
+  dom.charPresetsList.innerHTML = '';
+
+  characters.forEach((char, idx) => {
+    const card = document.createElement('div');
+    card.className = `character-card ${idx === 0 ? 'active' : ''}`;
+    card.innerHTML = `
+      <div class="character-card-name">👤 ${escapeHTML(char.name)}</div>
+      <p class="character-card-desc">${escapeHTML(char.desc)}</p>
+    `;
+
+    card.addEventListener('click', () => {
+      selectCharacterPreset(char, idx);
+    });
+
+    dom.charPresetsList.appendChild(card);
+  });
+}
+
+function selectCharacterPreset(char, index) {
+  dom.charInput.value = `${char.name} (${char.desc})`;
+
+  // Destaca card selecionado
+  const cards = dom.charPresetsList.querySelectorAll('.character-card');
+  cards.forEach((c, idx) => {
+    c.classList.toggle('active', idx === index);
+  });
+}
+
+function renderRulePresets() {
+  if (!dom.rulePresetsList) return;
+  dom.rulePresetsList.innerHTML = '';
+
+  RULE_PRESETS.forEach((rule, idx) => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = `rule-chip ${idx === 0 ? 'active' : ''}`;
+    chip.textContent = rule.title;
+
+    chip.addEventListener('click', () => {
+      const chips = dom.rulePresetsList.querySelectorAll('.rule-chip');
+      chips.forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      updateRulesInputValue(rule.text);
+    });
+
+    dom.rulePresetsList.appendChild(chip);
+  });
+}
+
+function updateRulesInputValue(baseRuleText) {
+  let ruleText = baseRuleText || dom.rulesInput.value || 'Narrativo dinâmico';
+
+  // Remove sufixo de dados se já tiver para evitar duplicação
+  ruleText = ruleText.replace(/\s*com testes de dados d20 em ações arriscadas\.?/gi, '').trim();
+
+  if (dom.toggleDiceRule && dom.toggleDiceRule.checked) {
+    ruleText += ' com testes de dados d20 em ações arriscadas';
+  }
+
+  dom.rulesInput.value = ruleText;
+}
+
+// =========================================================
+// SISTEMA DINÂMICO DE CONFIRMAÇÃO & ROLAGEM DE DADO D20
+// =========================================================
+function renderDiceChallenge(actionText, riskDescription) {
+  removeDiceChallenge();
+
+  const card = document.createElement('div');
+  card.id = 'dice-challenge-banner';
+  card.className = 'dice-challenge-banner';
+  card.innerHTML = `
+    <div class="dice-challenge-header">
+      <span class="dice-icon-spin">🎲</span>
+      <span class="dice-challenge-title">Verge Exige Teste de Risco (d20)</span>
+    </div>
+    <p class="dice-challenge-risk">
+      <strong>Risco em jogo:</strong> ${escapeHTML(riskDescription)}
+    </p>
+    <div class="dice-challenge-actions">
+      <button type="button" class="btn-dice-confirm" id="btn-confirm-dice">
+        <span>🎲</span> Confirmar e Rolar Dado
+      </button>
+      <button type="button" class="btn-dice-cancel" id="btn-cancel-dice">
+        ↩️ Escolher outra ação
+      </button>
+    </div>
+  `;
+
+  dom.chatBox.appendChild(card);
+  dom.chatBox.scrollTop = dom.chatBox.scrollHeight;
+
+  const btnConfirm = card.querySelector('#btn-confirm-dice');
+  const btnCancel = card.querySelector('#btn-cancel-dice');
+
+  btnConfirm.addEventListener('click', () => {
+    btnConfirm.disabled = true;
+    btnCancel.disabled = true;
+
+    // Efeito visual de rolagem
+    const diceFaces = ['🎲 4', '🎲 19', '🎲 2', '🎲 15', '🎲 20', '🎲 8', '🎲 12'];
+    let idx = 0;
+    const ticker = setInterval(() => {
+      btnConfirm.innerHTML = `<span>🎲</span> Verge rolando... ${diceFaces[idx % diceFaces.length]}`;
+      idx++;
+    }, 85);
+
+    setTimeout(async () => {
+      clearInterval(ticker);
+
+      const roll = Math.floor(Math.random() * 20) + 1;
+      let outcome = '';
+      if (roll === 20) outcome = 'Sucesso Crítico Épico!';
+      else if (roll >= 10) outcome = 'Sucesso!';
+      else if (roll >= 2) outcome = 'Complicação / Risco!';
+      else outcome = 'Falha Crítica Desastrosa!';
+
+      removeDiceChallenge();
+
+      // Fala o resultado do dado rolado por Verge
+      appendMessage('system', `🎲 Verge rolou o d20: **${roll}** (${outcome})`);
+
+      // Dá andamento na narrativa com o desfecho da ação
+      const resolutionMessage = `[🎲 Verge rolou d20: ${roll} (${outcome})] ${actionText}`;
+      await submitResolvedAction(resolutionMessage);
+    }, 700);
+  });
+
+  btnCancel.addEventListener('click', () => {
+    removeDiceChallenge();
+
+    // Reverte a tentativa e o alerta para manter o histórico da crônica limpo
+    if (state.activeAdventure && state.activeAdventure.history.length >= 2) {
+      state.activeAdventure.history.splice(-2, 2);
+      AdventureStorage.updateHistory(
+        state.activeAdventure.id,
+        state.activeAdventure.history,
+        state.activeAdventure.lastOptions || []
+      );
+    }
+
+    appendMessage('system', '↩️ *Você reconsiderou e decidiu não correr esse risco. Escolha outra abordagem:*');
+
+    // Restaura as opções anteriores e preenche o input com a ação para o jogador editar
+    renderSuggestions(state.activeAdventure.lastOptions || []);
+    dom.actionInput.value = actionText;
+    dom.actionInput.focus();
+    dom.actionInput.select();
+  });
+}
+
+function removeDiceChallenge() {
+  const existing = document.getElementById('dice-challenge-banner');
+  if (existing) existing.remove();
+}
+
+async function submitResolvedAction(resolutionMessage) {
+  if (state.isLoading || !state.activeAdventure) return;
+
+  setLoading(true);
+  if (dom.actionSuggestions) dom.actionSuggestions.classList.add('hidden');
+
+  state.activeAdventure.history.push({ role: 'user', text: resolutionMessage });
+  AdventureStorage.updateHistory(state.activeAdventure.id, state.activeAdventure.history);
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        setup: state.activeAdventure.setup,
+        message: resolutionMessage,
+        history: state.activeAdventure.history
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erro ao processar turno.');
+
+    appendMessage('dm', data.reply);
+    state.activeAdventure.history.push({ role: 'model', text: data.reply });
+    state.activeAdventure.lastOptions = data.options || [];
+
+    if (data.status) {
+      state.activeAdventure.status = data.status;
+      renderCharacterSheet(data.status);
+    }
+
+    AdventureStorage.updateHistory(
+      state.activeAdventure.id,
+      state.activeAdventure.history,
+      data.options || [],
+      data.status || null
+    );
+
+    renderSuggestions(data.options || []);
+    renderSidebar();
+
+  } catch (err) {
+    appendMessage('dm', `[Falha de conexão com Verge: ${err.message}]`);
+  } finally {
+    setLoading(false);
+    dom.actionInput.focus();
+  }
 }
 
 function closeMobileSidebar() {
@@ -352,9 +738,10 @@ function showSetupPanel() {
   dom.gamePanel.classList.add('hidden');
   if (dom.actionSuggestions) dom.actionSuggestions.classList.add('hidden');
 
-  dom.themeInput.value = '';
-  dom.charInput.value = '';
-  dom.themeInput.focus();
+  // Seleciona o primeiro preset por padrão
+  if (SCENARIO_PRESETS.length > 0) {
+    selectScenarioPreset(SCENARIO_PRESETS[0]);
+  }
 
   renderSidebar();
 }
@@ -392,6 +779,8 @@ async function submitAction(actionText) {
   const action = (actionText || '').trim();
   if (!action || state.isLoading || !state.activeAdventure) return;
 
+  removeDiceChallenge();
+
   appendMessage('player', action);
   dom.actionInput.value = '';
 
@@ -418,6 +807,19 @@ async function submitAction(actionText) {
 
     appendMessage('dm', data.reply);
     state.activeAdventure.history.push({ role: 'model', text: data.reply });
+
+    // Se Verge exigiu confirmação de teste de dado
+    if (data.diceRequirement && data.diceRequirement.required) {
+      AdventureStorage.updateHistory(
+        state.activeAdventure.id,
+        state.activeAdventure.history,
+        state.activeAdventure.lastOptions || []
+      );
+      renderDiceChallenge(action, data.diceRequirement.risk);
+      renderSidebar();
+      return;
+    }
+
     state.activeAdventure.lastOptions = data.options || [];
 
     if (data.status) {
@@ -436,7 +838,7 @@ async function submitAction(actionText) {
     renderSidebar();
 
   } catch (err) {
-    appendMessage('dm', `[Falha de conexão com o Mestre: ${err.message}]`);
+    appendMessage('dm', `[Falha de conexão com Verge: ${err.message}]`);
   } finally {
     setLoading(false);
     dom.actionInput.focus();
@@ -462,7 +864,7 @@ function exportCurrentChronicle() {
   let turnCounter = 1;
   adv.history.forEach((turn) => {
     if (turn.role === 'model') {
-      doc += `### 🌌 Narrador (Turno ${turnCounter})\n\n${turn.text.trim()}\n\n`;
+      doc += `### 🌌 Verge (Turno ${turnCounter})\n\n${turn.text.trim()}\n\n`;
       turnCounter++;
     } else {
       doc += `### 🗡️ Você\n\n> *${turn.text.trim()}*\n\n`;
@@ -499,16 +901,27 @@ if (dom.sidebarOverlay) {
   dom.sidebarOverlay.addEventListener('click', closeMobileSidebar);
 }
 
+if (dom.toggleDiceRule) {
+  dom.toggleDiceRule.addEventListener('change', () => {
+    updateRulesInputValue();
+  });
+}
+
+if (dom.btnRefreshPresets) {
+  dom.btnRefreshPresets.addEventListener('click', fetchNewAiPresets);
+}
+
 dom.setupForm.addEventListener('submit', async (e) => {
   e.preventDefault();
 
   const theme = dom.themeInput.value.trim();
   const character = dom.charInput.value.trim();
   const rules = dom.rulesInput.value.trim();
+  const useDice = Boolean(dom.toggleDiceRule ? dom.toggleDiceRule.checked : true);
 
   if (!theme || !character) return;
 
-  const setup = { theme, character, rules };
+  const setup = { theme, character, rules, useDice };
   setLoading(true);
 
   try {
@@ -565,6 +978,8 @@ if (dom.btnDeleteAdventure) {
 document.addEventListener('DOMContentLoaded', () => {
   checkApiStatus();
   renderSidebar();
+  renderScenarioPresets();
+  renderRulePresets();
 
   const activeId = AdventureStorage.getActiveId();
   if (activeId && AdventureStorage.getById(activeId)) {
