@@ -95,10 +95,23 @@
               </div>
             </div>
             <div class="game-controls">
-              <button type="button" id="btn-export" class="btn small" title="Baixar crônica completa em Markdown">📜
-                Exportar (.md)</button>
-              <button type="button" id="btn-delete-adventure" class="btn small btn-danger"
-                title="Excluir esta aventura">🗑️ Excluir</button>
+              <button type="button" id="btn-export" class="btn small" title="Baixar crônica completa em Markdown">📜 Exportar (.md)</button>
+              <button type="button" id="btn-delete-adventure" class="btn small btn-danger" title="Excluir esta aventura">🗑️ Excluir</button>
+            </div>
+          </div>
+
+          <!-- Mini Ficha / Status & Inventário Dinâmico -->
+          <div id="character-sheet" class="character-sheet">
+            <div class="sheet-item sheet-status">
+              <span class="sheet-label">❤️ Condição:</span>
+              <span id="char-condition-badge" class="condition-badge condition-healthy">Ileso</span>
+            </div>
+            <div class="sheet-divider"></div>
+            <div class="sheet-item sheet-inventory">
+              <span class="sheet-label">🎒 Inventário:</span>
+              <div id="char-inventory-list" class="inventory-tags">
+                <span class="inventory-empty">Nenhum item relevante</span>
+              </div>
             </div>
           </div>
 

@@ -18,6 +18,7 @@ const AdventureStorage = {
           setup: parsed.setup,
           history: parsed.history || [],
           lastOptions: [],
+          status: { condition: 'Ileso', inventory: [] },
           updatedAt: parsed.updatedAt || new Date().toISOString()
         }];
         localStorage.setItem(STORAGE_ADVENTURES_KEY, JSON.stringify(migrated));
@@ -57,7 +58,7 @@ const AdventureStorage = {
     return list.find(a => a.id === id) || null;
   },
 
-  create(title, setup, openingText, options = []) {
+  create(title, setup, openingText, options = [], status = null) {
     const list = this.getAll();
     const newAdventure = {
       id: 'adv_' + Date.now(),
@@ -67,6 +68,7 @@ const AdventureStorage = {
         { role: 'model', text: openingText }
       ],
       lastOptions: options || [],
+      status: status || { condition: 'Ileso', inventory: [] },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -76,13 +78,16 @@ const AdventureStorage = {
     return newAdventure;
   },
 
-  updateHistory(id, newHistory, options = null) {
+  updateHistory(id, newHistory, options = null, status = null) {
     const list = this.getAll();
     const index = list.findIndex(a => a.id === id);
     if (index !== -1) {
       list[index].history = newHistory;
       if (options !== null) {
         list[index].lastOptions = options;
+      }
+      if (status !== null) {
+        list[index].status = status;
       }
       list[index].updatedAt = new Date().toISOString();
       this.saveAll(list);
@@ -127,6 +132,10 @@ const dom = {
   activeThemeLabel: document.getElementById('active-theme-label'),
   btnExport: document.getElementById('btn-export'),
   btnDeleteAdventure: document.getElementById('btn-delete-adventure'),
+
+  charConditionBadge: document.getElementById('char-condition-badge'),
+  charInventoryList: document.getElementById('char-inventory-list'),
+
   chatBox: document.getElementById('chat-box'),
   loading: document.getElementById('loading-indicator'),
   actionSuggestions: document.getElementById('action-suggestions'),
@@ -199,6 +208,36 @@ function setLoading(loading) {
   if (dom.suggestionsContainer) {
     const chips = dom.suggestionsContainer.querySelectorAll('.suggestion-chip');
     chips.forEach(chip => chip.disabled = loading);
+  }
+}
+
+function renderCharacterSheet(status) {
+  if (!dom.charConditionBadge || !dom.charInventoryList) return;
+
+  const safeStatus = status || { condition: 'Ileso', inventory: [] };
+  const condition = safeStatus.condition || 'Ileso';
+  const inventory = Array.isArray(safeStatus.inventory) ? safeStatus.inventory : [];
+
+  // Atualiza Badge de Condição com cor dinâmica
+  dom.charConditionBadge.textContent = condition;
+  dom.charConditionBadge.className = 'condition-badge';
+
+  const lower = condition.toLowerCase();
+  if (lower.includes('crític') || lower.includes('morrend') || lower.includes('inconsciente') || lower.includes('grave') || lower.includes('sangrand')) {
+    dom.charConditionBadge.classList.add('condition-danger');
+  } else if (lower.includes('ferid') || lower.includes('exaust') || lower.includes('cansad') || lower.includes('abalad') || lower.includes('alert') || lower.includes('adrenalisad') || lower.includes('tont')) {
+    dom.charConditionBadge.classList.add('condition-warning');
+  } else {
+    dom.charConditionBadge.classList.add('condition-healthy');
+  }
+
+  // Atualiza Tags de Inventário
+  if (inventory.length === 0) {
+    dom.charInventoryList.innerHTML = '<span class="inventory-empty">Nenhum item relevante</span>';
+  } else {
+    dom.charInventoryList.innerHTML = inventory.map(item => `
+      <span class="inventory-tag">📦 ${escapeHTML(item)}</span>
+    `).join('');
   }
 }
 
@@ -342,6 +381,7 @@ function selectAdventure(id) {
     appendMessage(turn.role === 'user' ? 'player' : 'dm', turn.text);
   });
 
+  renderCharacterSheet(adv.status || { condition: 'Ileso', inventory: [] });
   renderSuggestions(adv.lastOptions || []);
 
   dom.actionInput.focus();
@@ -380,10 +420,16 @@ async function submitAction(actionText) {
     state.activeAdventure.history.push({ role: 'model', text: data.reply });
     state.activeAdventure.lastOptions = data.options || [];
 
+    if (data.status) {
+      state.activeAdventure.status = data.status;
+      renderCharacterSheet(data.status);
+    }
+
     AdventureStorage.updateHistory(
       state.activeAdventure.id,
       state.activeAdventure.history,
-      data.options || []
+      data.options || [],
+      data.status || null
     );
 
     renderSuggestions(data.options || []);
@@ -408,6 +454,8 @@ function exportCurrentChronicle() {
   doc += `> **Cenário:** ${adv.setup.theme}\n`;
   doc += `> **Protagonista:** ${adv.setup.character}\n`;
   doc += `> **Estilo & Regras:** ${adv.setup.rules}\n`;
+  doc += `> **Condição Final:** ${adv.status?.condition || 'Ileso'}\n`;
+  doc += `> **Inventário:** ${adv.status?.inventory?.length ? adv.status.inventory.join(', ') : 'Nenhum item relevante'}\n`;
   doc += `> **Exportado em:** ${new Date().toLocaleString('pt-BR')}\n\n`;
   doc += `---\n\n`;
 
@@ -477,7 +525,8 @@ dom.setupForm.addEventListener('submit', async (e) => {
       data.title,
       setup,
       data.opening,
-      data.options || []
+      data.options || [],
+      data.status || { condition: 'Ileso', inventory: [] }
     );
     selectAdventure(newAdventure.id);
 

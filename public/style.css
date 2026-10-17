@@ -406,6 +406,97 @@ input:focus, textarea:focus {
   flex-shrink: 0;
 }
 
+/* =========================================================
+   MINI FICHA: CONDIÇÃO & INVENTÁRIO DINÂMICO
+   ========================================================= */
+.character-sheet {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  background: #0d1420;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.6rem 0.85rem;
+  margin-bottom: 0.85rem;
+  font-size: 0.85rem;
+}
+
+.sheet-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sheet-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+}
+
+.condition-badge {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.18rem 0.55rem;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.condition-healthy {
+  background: #052e16;
+  color: #4ade80;
+  border-color: #22c55e44;
+}
+
+.condition-warning {
+  background: #422006;
+  color: #facc15;
+  border-color: #eab30844;
+}
+
+.condition-danger {
+  background: #450a0a;
+  color: #f87171;
+  border-color: #ef444444;
+}
+
+.sheet-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+}
+
+.sheet-inventory {
+  flex: 1;
+  min-width: 220px;
+}
+
+.inventory-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.inventory-tag {
+  background: #141f2d;
+  border: 1px solid #25364b;
+  color: #e2e8f0;
+  font-size: 0.76rem;
+  padding: 0.16rem 0.5rem;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.inventory-empty {
+  font-size: 0.76rem;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
 .chat-box {
   min-height: 400px;
   max-height: 540px;

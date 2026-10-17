@@ -44,14 +44,30 @@ DIRETRIZES FUNDAMENTAIS:
 3. Respeite as ações do jogador, narrando consequências lógicas e novos desafios.
 4. NUNCA narre pelo jogador nem tome decisões por ele.
 5. Conclua cada turno com o cenário em aberto e instigue a ação do jogador.
-6. OBRIGATÓRIO: Ao final de toda resposta, sugira exatamente 3 opções de ações possíveis, dinâmicas e contrastantes para o protagonista tomar a seguir, separadas por barra vertical '|', estritamente no formato:
-[OPCOES: Primeira ação | Segunda ação | Terceira ação]`;
+6. OBRIGATÓRIO: Ao final de toda resposta, sugira exatamente 3 opções de ações possíveis para o protagonista tomar a seguir, no formato:
+[OPCOES: Primeira ação | Segunda ação | Terceira ação]
+7. OBRIGATÓRIO: Logo após as opções, atualize a condição física/mental atual do protagonista (ex: Ileso, Ferido, Exausto, Adrenalisado) e a lista de itens relevantes que ele carrega (separados por vírgula), no formato estrito:
+[STATUS: Condicao=Ileso | Inventario=Item 1, Item 2]`;
 }
 
 function parseStoryResponse(rawText) {
   let text = rawText || '';
   let options = [];
+  let status = null;
 
+  // Extrai [STATUS: Condicao=... | Inventario=...]
+  const statusMatch = text.match(/\[STATUS:\s*Condi[çc][ãa]o=([^|]+)\s*\|\s*Invent[áa]rio=([^\]]+)\]/i);
+  if (statusMatch) {
+    const condition = statusMatch[1].trim();
+    const inventory = statusMatch[2]
+      .split(',')
+      .map(item => item.trim())
+      .filter(item => item.length > 0 && !item.toLowerCase().includes('nenhum'));
+    status = { condition, inventory };
+    text = text.replace(/\[STATUS:\s*Condi[çc][ãa]o=[^|]+\s*\|\s*Invent[áa]rio=[^\]]+\]/i, '').trim();
+  }
+
+  // Extrai [OPÇÕES: ...]
   const optionsMatch = text.match(/\[(?:OPÇÕES|OPCOES|SUGESTÕES|SUGESTOES|ESCOLHAS):\s*(.+?)\]/i);
   if (optionsMatch) {
     options = optionsMatch[1]
@@ -61,7 +77,7 @@ function parseStoryResponse(rawText) {
     text = text.replace(/\[(?:OPÇÕES|OPCOES|SUGESTÕES|SUGESTOES|ESCOLHAS):\s*.+?\]/i, '').trim();
   }
 
-  return { text, options };
+  return { text, options, status };
 }
 
 async function generateStory(contents, systemInstruction) {
@@ -106,10 +122,12 @@ app.post('/api/init', async (req, res) => {
     const openingPrompt = `Descreva a cena de abertura imersiva deste mundo, apresentando a situação inicial imediata onde o protagonista se encontra e o primeiro dilema ou decisão que ele precisa tomar.
 
 IMPORTANTE:
-1. Na penúltima linha, forneça um título marcante para esta aventura:
+1. Na antepenúltima linha, forneça um título marcante para esta aventura:
 [TITULO: Seu Título Aqui]
-2. Na última linha, forneça 3 opções de ações iniciais instigantes:
-[OPCOES: Opção 1 | Opção 2 | Opção 3]`;
+2. Na penúltima linha, forneça 3 opções de ações iniciais instigantes:
+[OPCOES: Opção 1 | Opção 2 | Opção 3]
+3. Na última linha, forneça a condição inicial do herói e 2 a 4 itens iniciais que ele carrega no corpo/bolsos:
+[STATUS: Condicao=Ileso | Inventario=Item 1, Item 2]`;
 
     let rawOpening = await generateStory(openingPrompt, systemInstruction);
     let title = setup.theme.length > 30 ? setup.theme.slice(0, 30).trim() + '...' : setup.theme;
@@ -120,9 +138,14 @@ IMPORTANTE:
       rawOpening = rawOpening.replace(/\[TITULO:\s*.+?\]/i, '').trim();
     }
 
-    const { text: opening, options } = parseStoryResponse(rawOpening);
+    const { text: opening, options, status } = parseStoryResponse(rawOpening);
 
-    return res.json({ opening, title, options });
+    return res.json({
+      opening,
+      title,
+      options,
+      status: status || { condition: 'Ileso', inventory: [] }
+    });
   } catch (error) {
     console.error('Erro em /api/init:', error);
     return res.status(500).json({
@@ -155,9 +178,9 @@ app.post('/api/chat', async (req, res) => {
     });
 
     const rawReply = await generateStory(contents, systemInstruction);
-    const { text: reply, options } = parseStoryResponse(rawReply);
+    const { text: reply, options, status } = parseStoryResponse(rawReply);
 
-    return res.json({ reply, options });
+    return res.json({ reply, options, status });
   } catch (error) {
     console.error('Erro em /api/chat:', error);
     return res.status(500).json({
